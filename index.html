@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>চান্দা কালেকশন</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body {
+            font-family: 'Hind Siliguri', sans-serif;
+            touch-action: none; 
+            overflow: hidden;
+        }
+        #gameCanvas {
+            background: radial-gradient(circle, #a8e6cf 0%, #dcedc1 100%);
+        }
+        .pop-in {
+            animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 select-none">
+
+    <div class="absolute top-4 right-4 z-20">
+        <div class="flex items-center gap-3 bg-white/90 backdrop-blur-md border-2 border-yellow-400 px-5 py-2 rounded-full shadow-lg transform hover:scale-105 transition duration-300">
+            <img src="https://i.ibb.co.com/Z6pPbNfN/cahda.png" alt="Coin" class="w-8 h-8 object-contain drop-shadow-sm">
+            <div class="flex flex-col leading-none">
+                <span class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">মোট চান্দা</span>
+                <span id="scoreDisplay" class="text-xl font-bold text-gray-800">০</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="startScreen" class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-md w-full pop-in border-t-8 border-green-500">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">চান্দা কালেকশন</h1>
+            <p class="text-gray-600 mb-6 text-lg">তুলি চান্দা, নাম আমার খাম্বা</p>
+            
+            <div class="space-y-4">
+                <p class="text-sm text-gray-500 bg-gray-100 p-3 rounded-lg">
+                    👆 ক্যারেক্টার সরাতে স্ক্রিনে টাচ করুন বা মাউস নাড়ান
+                </p>
+                <button onclick="startGame()" class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg transform transition active:scale-95 text-xl">
+                    চান্দা তোলা শুরু করুন
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="gameOverScreen" class="hidden absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/90 p-4">
+        <div class="bg-white rounded-3xl shadow-2xl overflow-hidden max-w-sm w-full pop-in relative">
+            <div class="bg-red-500 p-6 text-center">
+                <h2 class="text-3xl font-bold text-white">কট খেয়ে গেলাম নাকি!</h2>
+                <p class="text-red-100 mt-1">খাম্বার সাথে ধাক্কা লেগেছে!</p>
+            </div>
+            
+            <div class="p-8 pb-8 text-center">
+                <div class="mb-2 text-gray-500 font-semibold">মোট চান্দা কালেকশন</div>
+                <div class="text-5xl font-bold text-green-600 mb-2" id="finalScore">০</div>
+                <div class="text-xl text-yellow-600 font-bold mb-6">টাকা</div>
+                
+                <p class="text-sm text-gray-400 mb-8 border-t border-gray-200 pt-4">
+                    পরের বার আরও সাবধানে চান্দা তুলুন!
+                </p>
+
+                <button onclick="startGame()" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition active:scale-95 text-lg flex items-center justify-center gap-2">
+                    🔄 আবার চান্দা তুলুন
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="absolute bottom-5 right-5 z-40 pop-in">
+        <div class="group relative px-4 py-1.5 bg-gray-900/80 backdrop-blur-md border border-gray-700 rounded-full shadow-lg hover:border-green-500/50 transition-all duration-300 cursor-default">
+            <p class="font-['Fira_Code'] text-green-400 text-[10px] tracking-widest font-medium">
+                <span class="text-gray-500 opacity-70">&lt;</span>
+                Developed by IAR
+                <span class="text-gray-500 opacity-70">/&gt;</span>
+            </p>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas" class="block w-full h-full"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('scoreDisplay');
+        const finalScoreEl = document.getElementById('finalScore');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+
+        // --- সাউন্ড লোড করা হচ্ছে ---
+        const coinSound = new Audio('we-have-a-plane.mp3'); // কয়েন সাউন্ড
+        const weCustomSound = new Audio('dora-khai-gelam.mp3'); // গেম ওভার সাউন্ড
+        // ---------------------------
+
+        // সংখ্যাকে বাংলায় রূপান্তর করার ফাংশন
+        function toBanglaNum(num) {
+            const banglaDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+            return num.toString().split('').map(digit => banglaDigits[digit] || digit).join('');
+        }
+
+        const images = {
+            player: new Image(),
+            obstacle: new Image(),
+            coin: new Image()
+        };
+        images.player.src = 'https://i.ibb.co.com/5h3WdRKq/khamba-tarek.png';
+        images.obstacle.src = 'https://i.ibb.co.com/LDqnyDfj/khamba.png';
+        images.coin.src = 'https://i.ibb.co.com/Z6pPbNfN/cahda.png';
+
+        let gameActive = false;
+        let score = 0;
+        let frames = 0;
+        let items = [];
+        let animationId;
+        
+        let baseSpeed = 4;
+        let currentSpeedMultiplier = 1;
+        let spawnRate = 70;
+
+        let player = { x: 0, y: 0, w: 120, h: 150 };
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            player.y = canvas.height - 180; 
+            if(!gameActive) player.x = canvas.width / 2 - (player.w / 2);
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function handleInput(e) {
+            if (!gameActive) return;
+            let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            player.x = clientX - player.w / 2;
+            if (player.x < 0) player.x = 0;
+            if (player.x + player.w > canvas.width) player.x = canvas.width - player.w;
+        }
+        window.addEventListener('mousemove', handleInput);
+        window.addEventListener('touchmove', handleInput, {passive: false});
+        window.addEventListener('touchstart', handleInput, {passive: false});
+
+        function animate() {
+            if (!gameActive) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (images.player.complete) {
+                ctx.drawImage(images.player, player.x, player.y, player.w, player.h);
+            }
+
+            currentSpeedMultiplier = 1 + (score / 500); 
+            let currentSpawnRate = Math.max(30, spawnRate - Math.floor(score / 50));
+
+            if (frames % currentSpawnRate === 0) {
+                let isCoin = Math.random() > 0.35;
+                items.push({
+                    type: isCoin ? 'coin' : 'obstacle',
+                    x: Math.random() * (canvas.width - 60),
+                    y: -120,
+                    w: isCoin ? 50 : 65,
+                    h: isCoin ? 50 : 130,
+                    speed: (Math.random() * 2 + baseSpeed) 
+                });
+            }
+
+            for (let i = items.length - 1; i >= 0; i--) {
+                let item = items[i];
+                item.y += item.speed * currentSpeedMultiplier;
+
+                let img = item.type === 'coin' ? images.coin : images.obstacle;
+                if (img.complete) {
+                    ctx.drawImage(img, item.x, item.y, item.w, item.h);
+                }
+
+                let hitBoxPadding = 15;
+                if (
+                    player.x + hitBoxPadding < item.x + item.w &&
+                    player.x + player.w - hitBoxPadding > item.x &&
+                    player.y + hitBoxPadding < item.y + item.h &&
+                    player.y + player.h - hitBoxPadding > item.y
+                ) {
+                    if (item.type === 'coin') {
+                        score += 10;
+                        scoreEl.innerText = toBanglaNum(score);
+                        
+                        // --- কয়েন সাউন্ড প্লে ---
+                        coinSound.currentTime = 0; 
+                        coinSound.play().catch(e => console.log("Audio play error:", e));
+                        // ---------------------
+
+                        items.splice(i, 1);
+                    } else {
+                        gameOver();
+                    }
+                }
+
+                if (item.y > canvas.height) {
+                    items.splice(i, 1);
+                }
+            }
+
+            frames++;
+            animationId = requestAnimationFrame(animate);
+        }
+
+        function startGame() {
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            score = 0;
+            frames = 0;
+            items = [];
+            currentSpeedMultiplier = 1;
+            scoreEl.innerText = toBanglaNum(0);
+            gameActive = true;
+            resize(); 
+            animate();
+        }
+
+        function gameOver() {
+            gameActive = false;
+            cancelAnimationFrame(animationId);
+            
+            // --- গেম ওভার সাউন্ড প্লে (dora-khai-gelam.mp3) ---
+            weCustomSound.currentTime = 0;
+            weCustomSound.play().catch(e => console.log("Game Over sound error:", e));
+            // ------------------------------------------------
+            
+            finalScoreEl.innerText = toBanglaNum(score); 
+            gameOverScreen.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
