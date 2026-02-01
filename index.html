@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>চান্দা কালেকশন</title>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Hind+Siliguri:wght@400;600&family=Rubik+Wet+Paint&display=swap" rel="stylesheet">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
@@ -15,8 +17,17 @@
             touch-action: none; 
             overflow: hidden;
         }
+        /* ক্যানভাস ট্রান্সপারেন্ট রাখা হলো যাতে পেছনের ওয়াটারমার্ক দেখা যায় */
         #gameCanvas {
-            background: radial-gradient(circle, #a8e6cf 0%, #dcedc1 100%);
+            background: transparent; 
+            position: relative;
+            z-index: 10;
+        }
+        /* মূল ব্যাকগ্রাউন্ড কালার বডিতে দেওয়া হলো */
+        .game-bg {
+            background-image: url('https://i.ibb.co.com/39G9dycL/b982ac90-2c60-4933-92f2-1a1549f83c89.jpg');
+            background-size: cover;
+            background-position: center;
         }
         .pop-in {
             animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -27,8 +38,18 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 select-none">
+<body class="game-bg select-none h-screen w-screen relative overflow-hidden">
 
+    <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden opacity-20">
+        <div class="transform text-center select-none">
+            <h1 class="font-['Rubik_Wet_Paint'] text-6xl md:text-9xl text-gray-800/60 tracking-wider leading-tight">
+                DEV: RAFIN
+            </h1>
+            <h2 class="font-['Rubik_Wet_Paint'] text-4xl md:text-6xl text-green-900/40 mt-2">
+                CO: SAZZAD
+            </h2>
+        </div>
+    </div>
     <div class="absolute top-4 right-4 z-20">
         <div class="flex items-center gap-3 bg-white/90 backdrop-blur-md border-2 border-yellow-400 px-5 py-2 rounded-full shadow-lg transform hover:scale-105 transition duration-300">
             <img src="https://i.ibb.co.com/Z6pPbNfN/cahda.png" alt="Coin" class="w-8 h-8 object-contain drop-shadow-sm">
@@ -78,16 +99,6 @@
         </div>
     </div>
 
-    <div class="absolute bottom-5 right-5 z-40 pop-in">
-        <div class="group relative px-4 py-1.5 bg-gray-900/80 backdrop-blur-md border border-gray-700 rounded-full shadow-lg hover:border-green-500/50 transition-all duration-300 cursor-default">
-            <p class="font-['Fira_Code'] text-green-400 text-[10px] tracking-widest font-medium">
-                <span class="text-gray-500 opacity-70">&lt;</span>
-                Developed by IAR
-                <span class="text-gray-500 opacity-70">/&gt;</span>
-            </p>
-        </div>
-    </div>
-
     <canvas id="gameCanvas" class="block w-full h-full"></canvas>
 
     <script>
@@ -98,12 +109,27 @@
         const startScreen = document.getElementById('startScreen');
         const gameOverScreen = document.getElementById('gameOverScreen');
 
-        // --- সাউন্ড লোড করা হচ্ছে ---
-        const coinSound = new Audio('we-have-a-plane.mp3'); // কয়েন সাউন্ড
-        const weCustomSound = new Audio('dora-khai-gelam.mp3'); // গেম ওভার সাউন্ড
-        // ---------------------------
+        // --- সাউন্ড সেটআপ ---
+        const coinSound = new Audio('game-coin-pickup-.mp3'); 
+        const weCustomSound = new Audio('dora-khai-gelam.mp3'); 
+        const bgMusic = new Audio('we_have_a_plane.mp3'); 
+        
+        bgMusic.volume = 0.5;
+        bgMusic.loop = false; // লুপ ফলস, কারণ আমরা কাস্টম ডিলে দিবো
 
-        // সংখ্যাকে বাংলায় রূপান্তর করার ফাংশন
+        // ২ সেকেন্ড ডিলে লজিক
+        bgMusic.addEventListener('ended', function() {
+            if (gameActive) {
+                setTimeout(function() {
+                    if (gameActive) {
+                        bgMusic.currentTime = 0;
+                        bgMusic.play().catch(e => console.log("BG music loop error:", e));
+                    }
+                }, 2000); 
+            }
+        });
+
+        // বাংলা সংখ্যা ফাংশন
         function toBanglaNum(num) {
             const banglaDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
             return num.toString().split('').map(digit => banglaDigits[digit] || digit).join('');
@@ -115,7 +141,7 @@
             coin: new Image()
         };
         images.player.src = 'https://i.ibb.co.com/5h3WdRKq/khamba-tarek.png';
-        images.obstacle.src = 'https://i.ibb.co.com/LDqnyDfj/khamba.png';
+        images.obstacle.src = 'https://i.ibb.co.com/Z1BLFSgR/khamba0.png';
         images.coin.src = 'https://i.ibb.co.com/Z6pPbNfN/cahda.png';
 
         let gameActive = false;
@@ -193,10 +219,8 @@
                         score += 10;
                         scoreEl.innerText = toBanglaNum(score);
                         
-                        // --- কয়েন সাউন্ড প্লে ---
                         coinSound.currentTime = 0; 
                         coinSound.play().catch(e => console.log("Audio play error:", e));
-                        // ---------------------
 
                         items.splice(i, 1);
                     } else {
@@ -223,17 +247,21 @@
             scoreEl.innerText = toBanglaNum(0);
             gameActive = true;
             resize(); 
+
+            bgMusic.currentTime = 0;
+            bgMusic.play().catch(e => console.log("BG music error:", e));
+
             animate();
         }
 
         function gameOver() {
             gameActive = false;
             cancelAnimationFrame(animationId);
+
+            bgMusic.pause();
             
-            // --- গেম ওভার সাউন্ড প্লে (dora-khai-gelam.mp3) ---
             weCustomSound.currentTime = 0;
             weCustomSound.play().catch(e => console.log("Game Over sound error:", e));
-            // ------------------------------------------------
             
             finalScoreEl.innerText = toBanglaNum(score); 
             gameOverScreen.classList.remove('hidden');
