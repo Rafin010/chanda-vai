@@ -4,7 +4,7 @@
 গেমটি সম্পূর্ণ **HTML, Tailwind CSS এবং Vanilla JavaScript** দিয়ে তৈরি।
 
 🌐 **Live Demo:**  
-👉 https://teal-youtiao-22359e.netlify.app/
+👉 https://teal-youtiao-22359e.netlify.app/   
 
 ---
 
@@ -48,5 +48,3 @@
 ---
 
 ## 📁 Project Structure
-
-
